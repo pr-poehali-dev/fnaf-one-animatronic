@@ -61,6 +61,13 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				horror: {
+					dark: '#11A0A0A',
+					blood: '#8B0000',
+					rust: '#2D1B1B',
+					warning: '#FF4444',
+					green: '#00FF00'
 				}
 			},
 			borderRadius: {
