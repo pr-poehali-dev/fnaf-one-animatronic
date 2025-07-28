@@ -60,48 +60,97 @@ const Index = () => {
   const energyDrainRef = useRef<NodeJS.Timeout>();
 
   const playSound = useCallback((soundType: string) => {
-    console.log(`🔊 ${soundType}`);
-    
-    // Создаем псевдо-звуки через браузерный API
     if (typeof window !== 'undefined') {
       try {
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        let frequency = 200;
         
+        const createTone = (freq: number, duration: number, type: OscillatorType = 'sine', volume: number = 0.1) => {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          
+          oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
+          oscillator.type = type;
+          
+          gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+          
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + duration);
+        };
+
         switch (soundType) {
           case 'fredyLaugh':
-            frequency = 150;
+            // Зловещий смех - низкие частоты
+            createTone(120, 0.8, 'sawtooth', 0.15);
+            setTimeout(() => createTone(100, 0.6, 'sawtooth', 0.12), 200);
+            setTimeout(() => createTone(140, 0.4, 'sawtooth', 0.1), 600);
             break;
+            
           case 'doorSlam':
-            frequency = 100;
+            // Звук захлопывающейся двери - резкий удар
+            createTone(80, 0.3, 'square', 0.2);
+            setTimeout(() => createTone(60, 0.2, 'square', 0.15), 100);
             break;
+            
           case 'cameraSwitch':
-            frequency = 800;
+            // Переключение камеры - электронный звук
+            createTone(800, 0.1, 'square', 0.08);
+            setTimeout(() => createTone(1000, 0.05, 'square', 0.06), 50);
             break;
+            
           case 'powerOut':
-            frequency = 50;
+            // Отключение энергии - падающий тон
+            const powerOsc = audioContext.createOscillator();
+            const powerGain = audioContext.createGain();
+            powerOsc.connect(powerGain);
+            powerGain.connect(audioContext.destination);
+            
+            powerOsc.frequency.setValueAtTime(200, audioContext.currentTime);
+            powerOsc.frequency.exponentialRampToValueAtTime(30, audioContext.currentTime + 2);
+            powerOsc.type = 'sawtooth';
+            
+            powerGain.gain.setValueAtTime(0.15, audioContext.currentTime);
+            powerGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 2);
+            
+            powerOsc.start(audioContext.currentTime);
+            powerOsc.stop(audioContext.currentTime + 2);
             break;
+            
           case 'fredyAttack':
-            frequency = 80;
+            // Атака - страшный рёв
+            createTone(60, 1.5, 'sawtooth', 0.25);
+            setTimeout(() => createTone(80, 1.2, 'square', 0.2), 100);
+            setTimeout(() => createTone(45, 1.0, 'sawtooth', 0.18), 300);
+            break;
+            
+          case 'footsteps':
+            // Шаги - глухие удары
+            createTone(40, 0.2, 'square', 0.12);
+            setTimeout(() => createTone(35, 0.15, 'square', 0.1), 300);
+            break;
+            
+          case 'ambientHum':
+            // Фоновый гул
+            createTone(55, 2, 'sine', 0.03);
+            break;
+            
+          case 'victory':
+            // Победа - мелодичные тона
+            createTone(440, 0.5, 'sine', 0.1);
+            setTimeout(() => createTone(554, 0.5, 'sine', 0.1), 250);
+            setTimeout(() => createTone(659, 0.8, 'sine', 0.12), 500);
+            break;
+            
+          case 'gameStart':
+            // Начало игры - напряженный тон
+            createTone(200, 1, 'triangle', 0.08);
             break;
         }
-        
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
-        oscillator.type = 'sawtooth';
-        
-        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-        
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.3);
       } catch (e) {
-        // Браузер не поддерживает Web Audio API
+        console.log('Audio not supported');
       }
     }
   }, []);
@@ -245,6 +294,8 @@ const Index = () => {
           playSound('fredyLaugh');
         } else if (newLocation >= 3 && prev.fredyLocation < 3) {
           playSound('fredyLaugh');
+        } else if (newLocation > prev.fredyLocation && newLocation >= 2) {
+          playSound('footsteps');
         }
 
         return { 
@@ -336,6 +387,19 @@ const Index = () => {
       return () => clearTimeout(timeout);
     }
   }, [gameState.energy, gameState.gameActive, gameState.gameOver, playSound]);
+
+  // Фоновые звуки
+  useEffect(() => {
+    if (gameState.gameActive && !gameState.gameOver) {
+      const ambientInterval = setInterval(() => {
+        if (Math.random() < 0.3) {
+          playSound('ambientHum');
+        }
+      }, 10000);
+      
+      return () => clearInterval(ambientInterval);
+    }
+  }, [gameState.gameActive, gameState.gameOver, playSound]);
 
   if (gameState.gameOver) {
     return (
@@ -465,16 +529,12 @@ const Index = () => {
               <Button
                 key={index}
                 variant={gameState.currentCamera === index ? "default" : "outline"}
-                className={`w-full justify-start text-left text-xs ${
-                  gameState.fredyLocation === index ? 'border-primary animate-pulse' : ''
-                }`}
+                className="w-full justify-start text-left text-xs"
                 onClick={() => switchCamera(index)}
               >
                 <Icon name="Camera" size={14} className="mr-2" />
                 {location}
-                {gameState.fredyLocation === index && (
-                  <Icon name="AlertTriangle" size={14} className="ml-auto text-primary" />
-                )}
+
               </Button>
             ))}
           </div>
