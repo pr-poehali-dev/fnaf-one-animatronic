@@ -12,7 +12,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ startGame }) => {
     <div className="min-h-screen bg-background flex items-center justify-center">
       <Card className="p-8 bg-card border-primary text-center max-w-2xl">
         <h1 className="horror-title text-8xl text-primary mb-6 glitch">FNAF</h1>
-        <h2 className="text-3xl font-bold mb-4">Five Nights at Freddy's</h2>
+        <h2 className="text-3xl font-bold mb-4">One Nights at Freddy's</h2>
         <p className="text-lg mb-8 text-muted-foreground">
           Выживи одну ночь в пиццерии с аниматроником Фредди. 
           Используй камеры для наблюдения и двери для защиты. 
