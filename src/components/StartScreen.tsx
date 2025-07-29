@@ -43,9 +43,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ startGame }) => {
             <Button onClick={() => startGame('easy')} size="lg" variant="outline" className="text-green-500 border-green-500">
               Легко
             </Button>
-            <Button onClick={() => startGame('medium')} size="lg" className="bg-primary hover:bg-primary/80">
-              Средне
-            </Button>
+            <Button onClick={() => startGame('medium')} size="lg" className="bg-primary hover:bg-primary/80">нормально</Button>
             <Button onClick={() => startGame('hard')} size="lg" variant="outline" className="text-red-500 border-red-500">
               Сложно
             </Button>
