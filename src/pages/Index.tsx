@@ -1,16 +1,17 @@
-import React, { useState, useCallback } from 'react';
-import { Progress } from '@/components/ui/progress';
+import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import Icon from '@/components/ui/icon';
-import { GameState, DIFFICULTY_SETTINGS } from '@/components/game/GameTypes';
-import { createSoundSystem } from '@/components/game/SoundSystem';
-import { useGameLogic } from '@/components/game/GameLogic';
-import CameraPanel from '@/components/game/CameraPanel';
-import MonitorView from '@/components/game/MonitorView';
-import ControlPanel from '@/components/game/ControlPanel';
-import GameOverScreen from '@/components/game/GameOverScreen';
-import VictoryScreen from '@/components/game/VictoryScreen';
-import StartScreen from '@/components/game/StartScreen';
+
+import { GameState, DIFFICULTY_SETTINGS } from '@/components/GameTypes';
+import { useGameAudio } from '@/components/GameAudio';
+import { useGameLogic } from '@/components/GameLogic';
+import { CameraPanel } from '@/components/CameraPanel';
+import { ControlPanel } from '@/components/ControlPanel';
+import { SecurityMonitor } from '@/components/SecurityMonitor';
+import { GameOverScreen } from '@/components/GameOverScreen';
+import { VictoryScreen } from '@/components/VictoryScreen';
+import { StartScreen } from '@/components/StartScreen';
 
 const Index = () => {
   const [gameState, setGameState] = useState<GameState>({
@@ -30,12 +31,12 @@ const Index = () => {
     hour: 0
   });
 
-  const { playSound } = createSoundSystem();
+  const { playSound } = useGameAudio();
 
-  // Инициализируем игровую логику
-  useGameLogic(gameState, setGameState, playSound);
+  // Используем игровую логику
+  useGameLogic({ gameState, setGameState, playSound });
 
-  const startGame = useCallback((difficulty: 'easy' | 'medium' | 'hard' = 'medium') => {
+  const startGame = (difficulty: 'easy' | 'medium' | 'hard' = 'medium') => {
     setGameState(prev => ({
       ...prev,
       gameActive: true,
@@ -53,9 +54,9 @@ const Index = () => {
       rightDoorClosed: false
     }));
     playSound('gameStart');
-  }, [playSound]);
+  };
 
-  const toggleLeftDoor = useCallback(() => {
+  const toggleLeftDoor = () => {
     if (!gameState.gameActive || gameState.gameOver) return;
     setGameState(prev => {
       const newState = { ...prev, leftDoorClosed: !prev.leftDoorClosed };
@@ -72,9 +73,9 @@ const Index = () => {
       return newState;
     });
     playSound('doorSlam');
-  }, [gameState.gameActive, gameState.gameOver, playSound]);
+  };
 
-  const toggleRightDoor = useCallback(() => {
+  const toggleRightDoor = () => {
     if (!gameState.gameActive || gameState.gameOver) return;
     setGameState(prev => {
       const newState = { ...prev, rightDoorClosed: !prev.rightDoorClosed };
@@ -91,9 +92,9 @@ const Index = () => {
       return newState;
     });
     playSound('doorSlam');
-  }, [gameState.gameActive, gameState.gameOver, playSound]);
+  };
 
-  const switchCamera = useCallback((cameraIndex: number) => {
+  const switchCamera = (cameraIndex: number) => {
     if (!gameState.gameActive || gameState.gameOver) return;
     setGameState(prev => {
       const newState = { ...prev, currentCamera: cameraIndex };
@@ -109,18 +110,18 @@ const Index = () => {
       return newState;
     });
     playSound('cameraSwitch');
-  }, [gameState.gameActive, gameState.gameOver, playSound]);
+  };
 
   if (gameState.gameOver) {
-    return <GameOverScreen gameState={gameState} onStartGame={startGame} />;
+    return <GameOverScreen gameState={gameState} startGame={startGame} />;
   }
 
   if (gameState.victory) {
-    return <VictoryScreen gameState={gameState} onStartGame={startGame} />;
+    return <VictoryScreen gameState={gameState} startGame={startGame} />;
   }
 
   if (!gameState.gameActive) {
-    return <StartScreen onStartGame={startGame} />;
+    return <StartScreen startGame={startGame} />;
   }
 
   return (
@@ -149,16 +150,16 @@ const Index = () => {
         </div>
 
         {/* Левая панель - Камеры */}
-        <CameraPanel gameState={gameState} onSwitchCamera={switchCamera} />
+        <CameraPanel gameState={gameState} switchCamera={switchCamera} />
 
         {/* Центральная область - Монитор */}
-        <MonitorView gameState={gameState} />
+        <SecurityMonitor gameState={gameState} />
 
         {/* Правая панель - Управление */}
         <ControlPanel 
           gameState={gameState} 
-          onToggleLeftDoor={toggleLeftDoor}
-          onToggleRightDoor={toggleRightDoor}
+          toggleLeftDoor={toggleLeftDoor} 
+          toggleRightDoor={toggleRightDoor} 
         />
 
         {/* Нижняя панель */}
