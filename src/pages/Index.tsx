@@ -1,41 +1,16 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import React, { useState, useCallback } from 'react';
 import { Progress } from '@/components/ui/progress';
+import { Card } from '@/components/ui/card';
 import Icon from '@/components/ui/icon';
-
-interface GameState {
-  energy: number;
-  leftDoorClosed: boolean;
-  rightDoorClosed: boolean;
-  currentCamera: number;
-  fredyLocation: number;
-  fredyAggression: number;
-  gameTime: string;
-  gameActive: boolean;
-  gameOver: boolean;
-  victory: boolean;
-  difficulty: 'easy' | 'medium' | 'hard';
-  lastFredyMove: number;
-  fredyStunned: boolean;
-  hour: number;
-}
-
-const CAMERA_LOCATIONS = [
-  'Главная сцена',
-  'Зал', 
-  'Кухня',
-  'Левый коридор',
-  'Правый коридор',
-  'Левая дверь',
-  'Правая дверь'
-];
-
-const DIFFICULTY_SETTINGS = {
-  easy: { moveChance: 0.15, energyDrain: 0.8, aggressionGrowth: 0.5 },
-  medium: { moveChance: 0.25, energyDrain: 1.0, aggressionGrowth: 1.0 },
-  hard: { moveChance: 0.35, energyDrain: 1.3, aggressionGrowth: 1.5 }
-};
+import { GameState, DIFFICULTY_SETTINGS } from '@/components/game/GameTypes';
+import { createSoundSystem } from '@/components/game/SoundSystem';
+import { useGameLogic } from '@/components/game/GameLogic';
+import CameraPanel from '@/components/game/CameraPanel';
+import MonitorView from '@/components/game/MonitorView';
+import ControlPanel from '@/components/game/ControlPanel';
+import GameOverScreen from '@/components/game/GameOverScreen';
+import VictoryScreen from '@/components/game/VictoryScreen';
+import StartScreen from '@/components/game/StartScreen';
 
 const Index = () => {
   const [gameState, setGameState] = useState<GameState>({
@@ -55,176 +30,12 @@ const Index = () => {
     hour: 0
   });
 
-  const gameLoopRef = useRef<NodeJS.Timeout>();
-  const fredyMoveRef = useRef<NodeJS.Timeout>();
-  const energyDrainRef = useRef<NodeJS.Timeout>();
+  const { playSound } = createSoundSystem();
 
-  const playSound = useCallback((soundType: string) => {
-    if (typeof window !== 'undefined') {
-      try {
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        
-        // Генератор белого шума
-        const createNoise = (duration: number, volume: number = 0.1) => {
-          const bufferSize = audioContext.sampleRate * duration;
-          const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
-          const output = buffer.getChannelData(0);
-          
-          for (let i = 0; i < bufferSize; i++) {
-            output[i] = Math.random() * 2 - 1;
-          }
-          
-          const whiteNoise = audioContext.createBufferSource();
-          const gainNode = audioContext.createGain();
-          
-          whiteNoise.buffer = buffer;
-          whiteNoise.connect(gainNode);
-          gainNode.connect(audioContext.destination);
-          
-          gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
-          
-          whiteNoise.start(audioContext.currentTime);
-          whiteNoise.stop(audioContext.currentTime + duration);
-        };
-        
-        // Сложный тон с гармониками
-        const createComplexTone = (baseFreq: number, duration: number, harmonics: number[] = [1], volume: number = 0.1) => {
-          harmonics.forEach((harmonic, index) => {
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            
-            oscillator.frequency.setValueAtTime(baseFreq * harmonic, audioContext.currentTime);
-            oscillator.type = index % 2 === 0 ? 'sawtooth' : 'square';
-            
-            const harmonicVolume = volume / (harmonic * 2);
-            gainNode.gain.setValueAtTime(harmonicVolume, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
-            
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + duration);
-          });
-        };
+  // Инициализируем игровую логику
+  useGameLogic(gameState, setGameState, playSound);
 
-        switch (soundType) {
-          case 'fredyLaugh':
-            // Реалистичный зловещий смех с гармониками
-            createComplexTone(80, 1.2, [1, 1.5, 2.1, 3.2], 0.2);
-            setTimeout(() => createNoise(0.3, 0.05), 200);
-            setTimeout(() => createComplexTone(60, 0.8, [1, 2.5], 0.15), 500);
-            setTimeout(() => createComplexTone(120, 0.6, [1, 1.8], 0.12), 800);
-            break;
-            
-          case 'doorSlam':
-            // Реалистичный звук металлической двери
-            createNoise(0.1, 0.3);
-            createComplexTone(40, 0.4, [1, 3, 5, 7], 0.25);
-            setTimeout(() => createComplexTone(35, 0.2, [1, 2], 0.1), 100);
-            setTimeout(() => createNoise(0.05, 0.1), 150);
-            break;
-            
-          case 'cameraSwitch':
-            // Электронный звук с треском
-            createComplexTone(1200, 0.05, [1], 0.1);
-            setTimeout(() => createNoise(0.02, 0.08), 25);
-            setTimeout(() => createComplexTone(800, 0.03, [1], 0.08), 50);
-            break;
-            
-          case 'powerOut':
-            // Отключение с реалистичным затуханием
-            const powerOsc = audioContext.createOscillator();
-            const powerGain = audioContext.createGain();
-            const filter = audioContext.createBiquadFilter();
-            
-            powerOsc.connect(filter);
-            filter.connect(powerGain);
-            powerGain.connect(audioContext.destination);
-            
-            powerOsc.frequency.setValueAtTime(300, audioContext.currentTime);
-            powerOsc.frequency.exponentialRampToValueAtTime(20, audioContext.currentTime + 3);
-            powerOsc.type = 'sawtooth';
-            
-            filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(1000, audioContext.currentTime);
-            filter.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 3);
-            
-            powerGain.gain.setValueAtTime(0.2, audioContext.currentTime);
-            powerGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 3);
-            
-            powerOsc.start(audioContext.currentTime);
-            powerOsc.stop(audioContext.currentTime + 3);
-            
-            setTimeout(() => createNoise(0.5, 0.03), 1000);
-            break;
-            
-          case 'fredyAttack':
-            // СКРИМЕР - очень громкий и страшный звук
-            // Резкий рёв с максимальной громкостью
-            createComplexTone(30, 2, [1, 2, 3, 4, 5, 6], 0.8);
-            createNoise(2, 0.4);
-            
-            // Добавляем высокочастотный скрип
-            setTimeout(() => createComplexTone(2000, 1.5, [1, 1.5], 0.6), 100);
-            setTimeout(() => createComplexTone(50, 1.8, [1, 3, 5], 0.7), 200);
-            
-            // Глитч-эффекты
-            for (let i = 0; i < 10; i++) {
-              setTimeout(() => {
-                createComplexTone(Math.random() * 500 + 100, 0.1, [1], 0.4);
-              }, i * 150);
-            }
-            break;
-            
-          case 'footsteps':
-            // Реалистичные шаги по металлическому полу
-            createNoise(0.1, 0.15);
-            createComplexTone(25, 0.3, [1, 4, 7], 0.12);
-            setTimeout(() => {
-              createNoise(0.08, 0.12);
-              createComplexTone(22, 0.25, [1, 3], 0.1);
-            }, 400);
-            break;
-            
-          case 'ambientHum':
-            // Глубокий мрачный гул вентиляции
-            createComplexTone(40, 3, [1, 1.5, 2.2], 0.04);
-            setTimeout(() => createNoise(1, 0.01), 500);
-            break;
-            
-          case 'breathing':
-            // Тяжелое дыхание
-            createNoise(0.8, 0.06);
-            createComplexTone(60, 0.8, [1], 0.03);
-            break;
-            
-          case 'staticNoise':
-            // Помехи на камерах
-            createNoise(0.2, 0.1);
-            break;
-            
-          case 'victory':
-            // Победная мелодия
-            createComplexTone(440, 0.5, [1, 2], 0.12);
-            setTimeout(() => createComplexTone(554, 0.5, [1, 2], 0.12), 250);
-            setTimeout(() => createComplexTone(659, 0.8, [1, 2], 0.15), 500);
-            break;
-            
-          case 'gameStart':
-            // Напряженное начало
-            createComplexTone(100, 2, [1, 2.1, 3.5], 0.08);
-            setTimeout(() => createNoise(0.5, 0.02), 500);
-            break;
-        }
-      } catch (e) {
-        console.log('Audio not supported');
-      }
-    }
-  }, []);
-
-  const startGame = (difficulty: 'easy' | 'medium' | 'hard' = 'medium') => {
+  const startGame = useCallback((difficulty: 'easy' | 'medium' | 'hard' = 'medium') => {
     setGameState(prev => ({
       ...prev,
       gameActive: true,
@@ -242,9 +53,9 @@ const Index = () => {
       rightDoorClosed: false
     }));
     playSound('gameStart');
-  };
+  }, [playSound]);
 
-  const toggleLeftDoor = () => {
+  const toggleLeftDoor = useCallback(() => {
     if (!gameState.gameActive || gameState.gameOver) return;
     setGameState(prev => {
       const newState = { ...prev, leftDoorClosed: !prev.leftDoorClosed };
@@ -261,9 +72,9 @@ const Index = () => {
       return newState;
     });
     playSound('doorSlam');
-  };
+  }, [gameState.gameActive, gameState.gameOver, playSound]);
 
-  const toggleRightDoor = () => {
+  const toggleRightDoor = useCallback(() => {
     if (!gameState.gameActive || gameState.gameOver) return;
     setGameState(prev => {
       const newState = { ...prev, rightDoorClosed: !prev.rightDoorClosed };
@@ -280,9 +91,9 @@ const Index = () => {
       return newState;
     });
     playSound('doorSlam');
-  };
+  }, [gameState.gameActive, gameState.gameOver, playSound]);
 
-  const switchCamera = (cameraIndex: number) => {
+  const switchCamera = useCallback((cameraIndex: number) => {
     if (!gameState.gameActive || gameState.gameOver) return;
     setGameState(prev => {
       const newState = { ...prev, currentCamera: cameraIndex };
@@ -298,286 +109,18 @@ const Index = () => {
       return newState;
     });
     playSound('cameraSwitch');
-  };
-
-  // Продвинутое движение Фредди с ИИ
-  useEffect(() => {
-    if (!gameState.gameActive || gameState.gameOver || gameState.fredyStunned) return;
-
-    const settings = DIFFICULTY_SETTINGS[gameState.difficulty];
-    const timeSinceLastMove = Date.now() - gameState.lastFredyMove;
-    const moveInterval = Math.max(1000, 4000 - (gameState.fredyAggression * 200));
-
-    fredyMoveRef.current = setInterval(() => {
-      setGameState(prev => {
-        // Увеличиваем агрессию со временем
-        const newAggression = Math.min(10, prev.fredyAggression + (settings.aggressionGrowth * 0.1));
-        
-        // Вероятность движения зависит от агрессии и времени
-        const moveChance = settings.moveChance + (newAggression * 0.05);
-        const shouldMove = Math.random() < moveChance;
-        
-        if (!shouldMove) {
-          return { ...prev, fredyAggression: newAggression };
-        }
-
-        let newLocation = prev.fredyLocation;
-        
-        // Умное движение Фредди
-        if (prev.fredyLocation === 0) {
-          // Начинает двигаться со сцены
-          newLocation = Math.random() < 0.5 ? 1 : 2;
-        } else if (prev.fredyLocation < 4) {
-          // Движется к коридорам
-          if (Math.random() < 0.7) {
-            newLocation = prev.fredyLocation + 1;
-          } else {
-            // Иногда возвращается назад для непредсказуемости
-            newLocation = Math.max(0, prev.fredyLocation - 1);
-          }
-        } else if (prev.fredyLocation === 4) {
-          // Выбирает левый или правый коридор
-          newLocation = Math.random() < 0.5 ? 5 : 6;
-        } else if (prev.fredyLocation >= 5) {
-          // У дверей - проверяет атаку
-          const doorClosed = newLocation === 5 ? prev.leftDoorClosed : prev.rightDoorClosed;
-          
-          if (!doorClosed) {
-            // Атака!
-            playSound('fredyAttack');
-            return { 
-              ...prev, 
-              gameOver: true, 
-              fredyLocation: newLocation,
-              fredyAggression: newAggression,
-              lastFredyMove: Date.now()
-            };
-          } else {
-            // Дверь закрыта, отступает
-            newLocation = Math.max(0, prev.fredyLocation - 2);
-          }
-        }
-
-        // Звуки в зависимости от местоположения
-        if (newLocation >= 5) {
-          playSound('fredyLaugh');
-        } else if (newLocation >= 3 && prev.fredyLocation < 3) {
-          playSound('fredyLaugh');
-        } else if (newLocation > prev.fredyLocation && newLocation >= 2) {
-          playSound('footsteps');
-        }
-
-        return { 
-          ...prev, 
-          fredyLocation: newLocation,
-          fredyAggression: newAggression,
-          lastFredyMove: Date.now()
-        };
-      });
-    }, moveInterval);
-
-    return () => {
-      if (fredyMoveRef.current) clearInterval(fredyMoveRef.current);
-    };
-  }, [gameState.gameActive, gameState.gameOver, gameState.fredyStunned, gameState.difficulty, gameState.fredyAggression, playSound]);
-
-  // Система энергии
-  useEffect(() => {
-    if (!gameState.gameActive || gameState.gameOver) return;
-
-    const settings = DIFFICULTY_SETTINGS[gameState.difficulty];
-
-    energyDrainRef.current = setInterval(() => {
-      setGameState(prev => {
-        let energyDrain = 0.5 * settings.energyDrain; // Базовый расход
-        
-        if (prev.leftDoorClosed) energyDrain += 2 * settings.energyDrain;
-        if (prev.rightDoorClosed) energyDrain += 2 * settings.energyDrain;
-        if (prev.currentCamera > 0) energyDrain += 0.3 * settings.energyDrain; // Камеры тоже тратят энергию
-
-        const newEnergy = Math.max(0, prev.energy - energyDrain);
-        
-        if (newEnergy === 0) {
-          playSound('powerOut');
-          // При отключении энергии все двери открываются
-          return { 
-            ...prev, 
-            energy: 0, 
-            leftDoorClosed: false,
-            rightDoorClosed: false
-          };
-        }
-
-        return { ...prev, energy: newEnergy };
-      });
-    }, 1000);
-
-    return () => {
-      if (energyDrainRef.current) clearInterval(energyDrainRef.current);
-    };
-  }, [gameState.gameActive, gameState.gameOver, gameState.difficulty, playSound]);
-
-  // Игровой таймер и победа
-  useEffect(() => {
-    if (!gameState.gameActive || gameState.gameOver) return;
-
-    gameLoopRef.current = setInterval(() => {
-      setGameState(prev => {
-        const times = ['12:00 AM', '1:00 AM', '2:00 AM', '3:00 AM', '4:00 AM', '5:00 AM', '6:00 AM'];
-        const newHour = prev.hour + 1;
-        
-        if (newHour >= 6) {
-          playSound('victory');
-          return { ...prev, victory: true, gameActive: false };
-        }
-
-        return { 
-          ...prev, 
-          gameTime: times[newHour],
-          hour: newHour,
-          fredyAggression: prev.fredyAggression + 1 // Увеличиваем агрессию каждый час
-        };
-      });
-    }, 15000); // 15 секунд = 1 час в игре
-
-    return () => {
-      if (gameLoopRef.current) clearInterval(gameLoopRef.current);
-    };
   }, [gameState.gameActive, gameState.gameOver, playSound]);
 
-  // Game Over при отсутствии энергии
-  useEffect(() => {
-    if (gameState.energy === 0 && gameState.gameActive && !gameState.gameOver) {
-      const timeout = setTimeout(() => {
-        setGameState(prev => ({ ...prev, gameOver: true }));
-        playSound('fredyAttack');
-      }, 2000); // 2 секунды на отключение света
-      
-      return () => clearTimeout(timeout);
-    }
-  }, [gameState.energy, gameState.gameActive, gameState.gameOver, playSound]);
-
-  // Фоновые звуки и атмосферные эффекты
-  useEffect(() => {
-    if (gameState.gameActive && !gameState.gameOver) {
-      const ambientInterval = setInterval(() => {
-        const rand = Math.random();
-        if (rand < 0.1) {
-          playSound('ambientHum');
-        } else if (rand < 0.15) {
-          playSound('staticNoise');
-        } else if (rand < 0.18 && gameState.fredyLocation >= 3) {
-          playSound('breathing');
-        }
-      }, 8000);
-      
-      return () => clearInterval(ambientInterval);
-    }
-  }, [gameState.gameActive, gameState.gameOver, gameState.fredyLocation, playSound]);
-
   if (gameState.gameOver) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center relative overflow-hidden">
-        {/* СКРИМЕР ЭФФЕКТ */}
-        <div className="absolute inset-0 bg-black animate-pulse">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-9xl animate-bounce">🐻</div>
-          </div>
-          <div className="absolute top-1/4 left-1/4 text-red-500 text-6xl glitch animate-ping">👁️</div>
-          <div className="absolute top-3/4 right-1/4 text-red-500 text-6xl glitch animate-ping">👁️</div>
-          <div className="absolute inset-0 bg-red-500 opacity-20 animate-pulse"></div>
-        </div>
-        
-        <Card className="p-8 bg-card border-primary text-center max-w-md z-10 relative">
-          <h1 className="horror-title text-6xl text-primary mb-4 glitch">GAME OVER</h1>
-          <p className="text-xl mb-4">
-            {gameState.energy === 0 ? 'Энергия закончилась...' : 'Фредди поймал тебя...'}
-          </p>
-          <p className="text-sm text-muted-foreground mb-6">
-            Продержался до: {gameState.gameTime}
-          </p>
-          <div className="space-y-2">
-            <Button onClick={() => startGame(gameState.difficulty)} className="w-full bg-primary hover:bg-primary/80">
-              Попробовать снова
-            </Button>
-            <Button onClick={() => startGame('easy')} variant="outline" className="w-full">
-              Легкий уровень
-            </Button>
-          </div>
-        </Card>
-      </div>
-    );
+    return <GameOverScreen gameState={gameState} onStartGame={startGame} />;
   }
 
   if (gameState.victory) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="p-8 bg-card border-green-500 text-center max-w-md">
-          <h1 className="horror-title text-6xl text-green-500 mb-4">ПОБЕДА!</h1>
-          <p className="text-xl mb-4">Ты пережил ночь!</p>
-          <p className="text-sm text-muted-foreground mb-6">
-            Сложность: {gameState.difficulty === 'easy' ? 'Легкая' : gameState.difficulty === 'medium' ? 'Средняя' : 'Сложная'}
-          </p>
-          <div className="space-y-2">
-            <Button onClick={() => startGame(gameState.difficulty)} className="w-full bg-green-500 hover:bg-green-600">
-              Играть снова
-            </Button>
-            <Button onClick={() => startGame('hard')} variant="outline" className="w-full">
-              Сложный уровень
-            </Button>
-          </div>
-        </Card>
-      </div>
-    );
+    return <VictoryScreen gameState={gameState} onStartGame={startGame} />;
   }
 
   if (!gameState.gameActive) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="p-8 bg-card border-primary text-center max-w-2xl">
-          <h1 className="horror-title text-8xl text-primary mb-6 glitch">FNAF</h1>
-          <h2 className="text-3xl font-bold mb-4">Five Nights at Freddy's</h2>
-          <p className="text-lg mb-8 text-muted-foreground">
-            Выживи одну ночь в пиццерии с аниматроником Фредди. 
-            Используй камеры для наблюдения и двери для защиты. 
-            Береги энергию - она ограничена!
-          </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div className="flex flex-col items-center gap-3 p-4 border rounded-lg">
-              <Icon name="Camera" size={32} className="text-primary" />
-              <span className="font-semibold">Следи за Фредди</span>
-              <span className="text-sm text-muted-foreground">Наблюдение замедляет его</span>
-            </div>
-            <div className="flex flex-col items-center gap-3 p-4 border rounded-lg">
-              <Icon name="Lock" size={32} className="text-primary" />
-              <span className="font-semibold">Закрывай двери</span>
-              <span className="text-sm text-muted-foreground">Но это тратит энергию</span>
-            </div>
-            <div className="flex flex-col items-center gap-3 p-4 border rounded-lg">
-              <Icon name="Battery" size={32} className="text-primary" />
-              <span className="font-semibold">Экономь энергию</span>
-              <span className="text-sm text-muted-foreground">Без неё ты беззащитен</span>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <h3 className="text-xl font-bold">Выбери сложность:</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <Button onClick={() => startGame('easy')} size="lg" variant="outline" className="text-green-500 border-green-500">
-                Легко
-              </Button>
-              <Button onClick={() => startGame('medium')} size="lg" className="bg-primary hover:bg-primary/80">
-                Средне
-              </Button>
-              <Button onClick={() => startGame('hard')} size="lg" variant="outline" className="text-red-500 border-red-500">
-                Сложно
-              </Button>
-            </div>
-          </div>
-        </Card>
-      </div>
-    );
+    return <StartScreen onStartGame={startGame} />;
   }
 
   return (
@@ -606,118 +149,17 @@ const Index = () => {
         </div>
 
         {/* Левая панель - Камеры */}
-        <div className="col-span-3 row-span-11 bg-card border-r border-border p-4">
-          <h3 className="text-lg font-bold mb-4 text-primary">Камеры</h3>
-          <div className="space-y-2">
-            {CAMERA_LOCATIONS.map((location, index) => (
-              <Button
-                key={index}
-                variant={gameState.currentCamera === index ? "default" : "outline"}
-                className="w-full justify-start text-left text-xs"
-                onClick={() => switchCamera(index)}
-              >
-                <Icon name="Camera" size={14} className="mr-2" />
-                {location}
-
-              </Button>
-            ))}
-          </div>
-          
-          <div className="mt-6 p-3 bg-secondary rounded">
-            <h4 className="font-semibold text-sm mb-2">Статус Фредди</h4>
-            <div className="space-y-1 text-xs">
-              <div>Агрессия: {gameState.fredyAggression}/10</div>
-              <div className={`font-bold ${
-                gameState.fredyLocation >= 5 ? 'text-destructive' : 
-                gameState.fredyLocation >= 3 ? 'text-yellow-500' : 'text-green-500'
-              }`}>
-                {gameState.fredyStunned ? '😵 Остановлен' :
-                 gameState.fredyLocation >= 5 ? '🚨 У ДВЕРЕЙ!' : 
-                 gameState.fredyLocation >= 3 ? '⚠️ Близко' : '✅ Далеко'}
-              </div>
-            </div>
-          </div>
-        </div>
+        <CameraPanel gameState={gameState} onSwitchCamera={switchCamera} />
 
         {/* Центральная область - Монитор */}
-        <div className="col-span-6 row-span-10 bg-black border border-border m-4 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-gray-900 to-black flex items-center justify-center">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold mb-4 text-green-500">
-                {CAMERA_LOCATIONS[gameState.currentCamera]}
-              </h2>
-              {gameState.fredyLocation === gameState.currentCamera ? (
-                <div className={`text-6xl mb-4 ${gameState.fredyStunned ? '' : 'glitch'}`}>
-                  {gameState.fredyStunned ? '😵🐻' : '🐻'}
-                </div>
-              ) : (
-                <div className="text-4xl text-gray-600">📹</div>
-              )}
-              <p className="text-sm text-gray-400">
-                {gameState.fredyLocation === gameState.currentCamera 
-                  ? gameState.fredyStunned ? "Фредди остановлен наблюдением!" : "ВНИМАНИЕ: АНИМАТРОНИК ОБНАРУЖЕН!" 
-                  : "Зона безопасна"}
-              </p>
-            </div>
-          </div>
-          
-          {/* Эффект отключения энергии */}
-          {gameState.energy === 0 && (
-            <div className="absolute inset-0 bg-black flex items-center justify-center z-10">
-              <div className="text-center text-red-500">
-                <h2 className="text-4xl font-bold mb-4 glitch">ЭНЕРГИЯ ОТКЛЮЧЕНА</h2>
-                <p className="text-xl">Фредди идет...</p>
-              </div>
-            </div>
-          )}
-          
-          <div className="absolute inset-0 static opacity-20 pointer-events-none"></div>
-        </div>
+        <MonitorView gameState={gameState} />
 
         {/* Правая панель - Управление */}
-        <div className="col-span-3 row-span-11 bg-card border-l border-border p-4">
-          <h3 className="text-lg font-bold mb-4 text-primary">Управление</h3>
-          
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <h4 className="font-semibold">Левая дверь</h4>
-              <Button
-                variant={gameState.leftDoorClosed ? "destructive" : "outline"}
-                className="w-full"
-                onClick={toggleLeftDoor}
-                disabled={gameState.energy === 0}
-              >
-                <Icon name={gameState.leftDoorClosed ? "Lock" : "Unlock"} size={16} className="mr-2" />
-                {gameState.leftDoorClosed ? "ЗАКРЫТА" : "ОТКРЫТА"}
-              </Button>
-            </div>
-
-            <div className="space-y-2">
-              <h4 className="font-semibold">Правая дверь</h4>
-              <Button
-                variant={gameState.rightDoorClosed ? "destructive" : "outline"}
-                className="w-full"
-                onClick={toggleRightDoor}
-                disabled={gameState.energy === 0}
-              >
-                <Icon name={gameState.rightDoorClosed ? "Lock" : "Unlock"} size={16} className="mr-2" />
-                {gameState.rightDoorClosed ? "ЗАКРЫТА" : "ОТКРЫТА"}
-              </Button>
-            </div>
-
-            <div className="space-y-2">
-              <h4 className="font-semibold text-primary">Подсказки</h4>
-              <Card className="p-3 bg-secondary text-xs">
-                <ul className="space-y-1">
-                  <li>• Наблюдение замедляет Фредди</li>
-                  <li>• Закрытые двери отталкивают его</li>
-                  <li>• Агрессия растет со временем</li>
-                  <li>• Экономь энергию!</li>
-                </ul>
-              </Card>
-            </div>
-          </div>
-        </div>
+        <ControlPanel 
+          gameState={gameState} 
+          onToggleLeftDoor={toggleLeftDoor}
+          onToggleRightDoor={toggleRightDoor}
+        />
 
         {/* Нижняя панель */}
         <div className="col-span-9 row-span-1 bg-card border-t border-border p-4 flex items-center justify-center">
