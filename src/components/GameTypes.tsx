@@ -25,37 +25,43 @@ export const CAMERA_LOCATIONS = [
   'Правая дверь'
 ];
 
-export const GAME_VERSION = '1.4';
+export const GAME_VERSION = '1.5';
 
 export const DIFFICULTY_SETTINGS = {
   easy: {
-    energyDrain: 0.6,
-    baseMoveInterval: 8000, // 8 секунд базовый интервал
-    moveChance: 0.12,
-    aggressionGrowth: 0.2,
-    maxAggression: 6,
-    smartMovement: 0.3, // 30% умных ходов
-    doorSwitchSpeed: 0.4, // медленно переключается между дверьми
-    lateGameCalm: 0.8 // сильно успокаивается к утру
+    energyDrain: 0.7,
+    baseMoveInterval: 6000, // 6 секунд базовый интервал
+    moveChance: 0.18,
+    aggressionGrowth: 0.3,
+    maxAggression: 7,
+    smartMovement: 0.4, // 40% умных ходов
+    doorSwitchSpeed: 0.5, // чуть быстрее переключается
+    lateGameCalm: 0.7, // меньше успокоения
+    huntingMode: 0.15, // 15% шанс режима охоты
+    trapChance: 0.1 // 10% ловушек
   },
   medium: {
-    energyDrain: 1.0,
-    baseMoveInterval: 5000, // 5 секунд базовый интервал
-    moveChance: 0.25,
-    aggressionGrowth: 0.4,
-    maxAggression: 8,
-    smartMovement: 0.5, // 50% умных ходов
-    doorSwitchSpeed: 0.6, // средне переключается
-    lateGameCalm: 0.6 // средне успокаивается
+    energyDrain: 1.2,
+    baseMoveInterval: 3500, // 3.5 секунды базовый интервал
+    moveChance: 0.35,
+    aggressionGrowth: 0.6,
+    maxAggression: 10,
+    smartMovement: 0.65, // 65% умных ходов
+    doorSwitchSpeed: 0.75, // быстрее переключается
+    lateGameCalm: 0.5, // меньше успокоения
+    huntingMode: 0.25, // 25% шанс режима охоты
+    trapChance: 0.2 // 20% ловушек
   },
   hard: {
-    energyDrain: 1.3,
-    baseMoveInterval: 2000, // 2 секунды базовый интервал  
-    moveChance: 0.45,
-    aggressionGrowth: 0.8,
-    maxAggression: 15,
-    smartMovement: 0.85, // 85% умных ходов
-    doorSwitchSpeed: 0.95, // очень быстро переключается
-    lateGameCalm: 0.3 // слабо успокаивается
+    energyDrain: 1.6,
+    baseMoveInterval: 1200, // 1.2 секунды - БЕЗУМИЕ!
+    moveChance: 0.65,
+    aggressionGrowth: 1.2,
+    maxAggression: 20,
+    smartMovement: 0.95, // 95% умных ходов - почти всегда умный
+    doorSwitchSpeed: 0.98, // мгновенно переключается
+    lateGameCalm: 0.15, // почти не успокаивается
+    huntingMode: 0.4, // 40% шанс режима охоты
+    trapChance: 0.35 // 35% ловушек
   }
 };
