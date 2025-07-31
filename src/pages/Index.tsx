@@ -298,41 +298,6 @@ const GameApp = () => {
 
         {/* Правая панель - Управление */}
         <ControlPanel gameState={gameState} toggleDoor={toggleDoor} />
-      </div>
-      
-      {/* Рация для режима кампании */}
-      {selectedCampaignLevel && (
-        <RadioSystem 
-          radioCalls={selectedCampaignLevel.radioCalls}
-          onCallComplete={handleRadioCallComplete}
-          gameActive={gameState.gameActive}
-        />
-      )}
-      
-      {/* Анимации историй */}
-      {showStoryAnimation?.show && (
-        <StoryAnimation
-          storyType={showStoryAnimation.type}
-          scenario={showStoryAnimation.scenario}
-          characterName={showStoryAnimation.character}
-          description={showStoryAnimation.description}
-          onComplete={handleStoryAnimationComplete}
-        />
-      )}
-      
-      {/* Результаты кампании */}
-      {showStoryResult && (
-        <StoryResult
-          saved={radioCallResults.saved}
-          lost={radioCallResults.lost}
-          onContinue={handleStoryResultContinue}
-        />
-      )}
-        <ControlPanel 
-          gameState={gameState} 
-          toggleLeftDoor={toggleLeftDoor} 
-          toggleRightDoor={toggleRightDoor} 
-        />
 
         {/* Нижняя панель */}
         <div className="col-span-9 row-span-1 bg-card border-t border-border p-4 flex items-center justify-center">
@@ -366,6 +331,38 @@ const GameApp = () => {
           </Card>
         </div>
       )}
+      
+      {/* Рация для режима кампании */}
+      {selectedCampaignLevel && (
+        <RadioSystem 
+          radioCalls={selectedCampaignLevel.radioCalls}
+          onCallComplete={handleRadioCallComplete}
+          gameActive={gameState.gameActive}
+        />
+      )}
+      
+      {/* Анимации историй */}
+      {showStoryAnimation?.show && (
+        <StoryAnimation
+          storyType={showStoryAnimation.type}
+          scenario={showStoryAnimation.scenario}
+          characterName={showStoryAnimation.character}
+          description={showStoryAnimation.description}
+          onComplete={handleStoryAnimationComplete}
+        />
+      )}
+      
+      {/* Результаты кампании */}
+      {showStoryResult && (
+        <StoryResult
+          saved={radioCallResults.saved}
+          lost={radioCallResults.lost}
+          onContinue={handleStoryResultContinue}
+        />
+      )}
+    </div>
+  );
+};
 
       {gameState.fredyLocation >= 5 && !gameState.fredyStunned && (
         <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-50">
