@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import Icon from '@/components/ui/icon';
 
-import { GameState, DIFFICULTY_SETTINGS } from '@/components/GameTypes';
+import { GameState, DIFFICULTY_SETTINGS, GAME_VERSION } from '@/components/GameTypes';
 import { useGameAudio } from '@/components/GameAudio';
 import { useGameLogic } from '@/components/GameLogic';
 import { CameraPanel } from '@/components/CameraPanel';
@@ -132,6 +132,7 @@ const Index = () => {
         <div className="col-span-12 row-span-1 bg-card border-b border-border p-4 flex justify-between items-center">
           <div className="flex items-center gap-6">
             <div className="text-xl font-bold horror-title text-primary">FNAF Security</div>
+            <div className="text-sm text-muted-foreground">v{GAME_VERSION}</div>
             <div className="text-lg">Время: {gameState.gameTime}</div>
             <div className="text-sm">
               Сложность: {gameState.difficulty === 'easy' ? '🟢 Легко' : gameState.difficulty === 'medium' ? '🟡 Средне' : '🔴 Сложно'}
