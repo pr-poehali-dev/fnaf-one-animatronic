@@ -18,7 +18,7 @@ import { RadioSystem } from '@/components/RadioSystem';
 import { StoryAnimation, StoryResult } from '@/components/StoryAnimations';
 
 const GameApp = () => {
-  const { user } = useAuth();
+  const { user, updateStats, unlockLevel } = useAuth();
   const [currentScreen, setCurrentScreen] = useState<'menu' | 'survival' | 'campaign' | 'game'>('menu');
   const [selectedCampaignLevel, setSelectedCampaignLevel] = useState<CampaignLevel | null>(null);
   const [radioCallResults, setRadioCallResults] = useState<{saved: number; lost: number}>({saved: 0, lost: 0});
@@ -118,7 +118,22 @@ const GameApp = () => {
   };
 
   const handleGameEnd = () => {
-    if (selectedCampaignLevel) {
+    if (selectedCampaignLevel && user) {
+      const levelCompleted = gameState.victory;
+      
+      if (levelCompleted) {
+        updateStats({
+          nightsSurvived: user.stats.nightsSurvived + 1,
+          peopleSaved: user.stats.peopleSaved + radioCallResults.saved,
+          peopleLost: user.stats.peopleLost + radioCallResults.lost
+        });
+        
+        const nextLevelId = selectedCampaignLevel.id + 1;
+        if (nextLevelId <= 3) {
+          unlockLevel(nextLevelId);
+        }
+      }
+      
       setShowStoryResult(true);
     }
   };
