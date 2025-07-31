@@ -12,44 +12,20 @@ export const useGameLogic = ({ gameState, setGameState, playSound }: GameLogicPr
   const fredyMoveRef = useRef<NodeJS.Timeout>();
   const energyDrainRef = useRef<NodeJS.Timeout>();
 
-  // Супер продвинутое движение Фредди с адаптивным ИИ
+  // Продвинутое движение Фредди с ИИ
   useEffect(() => {
     if (!gameState.gameActive || gameState.gameOver || gameState.fredyStunned) return;
 
     const settings = DIFFICULTY_SETTINGS[gameState.difficulty];
-    
-    // ЭКСТРЕМАЛЬНО продвинутый интервал с режимом ОХОТЫ
-    const isHuntingMode = Math.random() < (settings.huntingMode || 0);
-    const huntingMultiplier = isHuntingMode ? 0.25 : 1; // В режиме охоты в 4 раза быстрее!
-    
-    const timeBasedCalm = gameState.hour >= 4 ? settings.lateGameCalm : 1;
-    const aggressionMultiplier = Math.min(gameState.fredyAggression / settings.maxAggression, 1);
-    const moveInterval = Math.max(200, settings.baseMoveInterval * (1 - aggressionMultiplier * 0.9) * timeBasedCalm * huntingMultiplier);
+    const moveInterval = Math.max(1000, 4000 - (gameState.fredyAggression * 200));
 
     fredyMoveRef.current = setInterval(() => {
       setGameState(prev => {
-        // В 6 утра Фредди полностью останавливается
-        if (prev.hour >= 6) {
-          return { ...prev, fredyLocation: 0 };
-        }
-
-        // Успокоение к утру (особенно сильное в 5 утра)
-        const hourCalm = prev.hour === 5 ? 0.3 : (prev.hour >= 4 ? timeBasedCalm : 1);
+        // Увеличиваем агрессию со временем
+        const newAggression = Math.min(10, prev.fredyAggression + (settings.aggressionGrowth * 0.1));
         
-        // ЭКСТРЕМАЛЬНОЕ увеличение агрессии + ловушки
-        const isTrapping = Math.random() < (settings.trapChance || 0);
-        const trapMultiplier = isTrapping ? 2.5 : 1; // Ловушки ускоряют рост агрессии
-        
-        const aggressionIncrease = settings.aggressionGrowth * (prev.hour + 1) * 0.08 * trapMultiplier;
-        const newAggression = Math.min(settings.maxAggression, prev.fredyAggression + aggressionIncrease);
-        
-        // БЕЗУМНАЯ вероятность движения с ловушками
-        const baseChance = settings.moveChance * hourCalm;
-        const aggressionBonus = (newAggression / settings.maxAggression) * 0.4;
-        const trapBonus = isTrapping ? 0.2 : 0; // Ловушки дают +20% к движению
-        const huntBonus = isHuntingMode ? 0.15 : 0; // Охота дает +15%
-        const moveChance = Math.min(0.98, baseChance + aggressionBonus + trapBonus + huntBonus);
-        
+        // Вероятность движения зависит от агрессии и времени
+        const moveChance = settings.moveChance + (newAggression * 0.05);
         const shouldMove = Math.random() < moveChance;
         
         if (!shouldMove) {
@@ -58,53 +34,26 @@ export const useGameLogic = ({ gameState, setGameState, playSound }: GameLogicPr
 
         let newLocation = prev.fredyLocation;
         
-        // Супер умное движение Фредди
+        // Умное движение Фредди
         if (prev.fredyLocation === 0) {
-          // Начинает движение - выбирает случайный путь
+          // Начинает двигаться со сцены
           newLocation = Math.random() < 0.5 ? 1 : 2;
         } else if (prev.fredyLocation < 4) {
-          // Движется к коридорам с учетом умности
-          const smartChoice = Math.random() < settings.smartMovement;
-          
-          if (smartChoice) {
-            // Умное движение - всегда вперед
+          // Движется к коридорам
+          if (Math.random() < 0.7) {
             newLocation = prev.fredyLocation + 1;
           } else {
-            // Случайное движение
-            if (Math.random() < 0.8) {
-              newLocation = prev.fredyLocation + 1;
-            } else {
-              newLocation = Math.max(0, prev.fredyLocation - 1);
-            }
+            // Иногда возвращается назад для непредсказуемости
+            newLocation = Math.max(0, prev.fredyLocation - 1);
           }
         } else if (prev.fredyLocation === 4) {
-          // Выбор коридора с учетом состояния дверей
-          const leftDoorOpen = !prev.leftDoorClosed;
-          const rightDoorOpen = !prev.rightDoorClosed;
-          
-          if (Math.random() < settings.smartMovement) {
-            // Умный выбор - идет к открытой двери
-            if (leftDoorOpen && rightDoorOpen) {
-              newLocation = Math.random() < 0.5 ? 5 : 6;
-            } else if (leftDoorOpen) {
-              newLocation = 5;
-            } else if (rightDoorOpen) {
-              newLocation = 6;
-            } else {
-              // Обе двери закрыты - ждет
-              newLocation = 4;
-            }
-          } else {
-            // Случайный выбор
-            newLocation = Math.random() < 0.5 ? 5 : 6;
-          }
+          // Выбирает левый или правый коридор
+          newLocation = Math.random() < 0.5 ? 5 : 6;
         } else if (prev.fredyLocation >= 5) {
-          // У дверей - сложная логика атаки и переключения
-          const isLeftDoor = prev.fredyLocation === 5;
-          const currentDoorClosed = isLeftDoor ? prev.leftDoorClosed : prev.rightDoorClosed;
-          const otherDoorClosed = isLeftDoor ? prev.rightDoorClosed : prev.leftDoorClosed;
+          // У дверей - проверяет атаку
+          const doorClosed = newLocation === 5 ? prev.leftDoorClosed : prev.rightDoorClosed;
           
-          if (!currentDoorClosed) {
+          if (!doorClosed) {
             // Атака!
             playSound('fredyAttack');
             return { 
@@ -115,38 +64,16 @@ export const useGameLogic = ({ gameState, setGameState, playSound }: GameLogicPr
               lastFredyMove: Date.now()
             };
           } else {
-            // Дверь закрыта - решает что делать
-            const switchChance = settings.doorSwitchSpeed * (1 + aggressionMultiplier);
-            
-            // МГНОВЕННОЕ переключение + фейковые отступления
-            const fakeRetreat = Math.random() < 0.1; // 10% шанс фейкового отступления
-            
-            if (fakeRetreat) {
-              // Фейковое отступление - на секунду уходит, потом возвращается
-              setTimeout(() => {
-                setGameState(current => ({ ...current, fredyLocation: prev.fredyLocation }));
-              }, 800);
-              newLocation = 4;
-              playSound('fredyLaugh');
-            } else if (Math.random() < switchChance && !otherDoorClosed) {
-              // МГНОВЕННОЕ переключение на другую дверь
-              newLocation = isLeftDoor ? 6 : 5;
-              playSound('fredyLaugh');
-            } else if (Math.random() < 0.2) {
-              // Редкое отступление
-              newLocation = 4;
-            } else {
-              // Терпеливо ждет у двери
-              newLocation = prev.fredyLocation;
-            }
+            // Дверь закрыта, отступает
+            newLocation = Math.max(0, prev.fredyLocation - 2);
           }
         }
 
-        // Звуки в зависимости от действий
-        if (newLocation >= 5 && prev.fredyLocation !== newLocation) {
+        // Звуки в зависимости от местоположения
+        if (newLocation >= 5) {
           playSound('fredyLaugh');
-        } else if (newLocation === 4 && prev.fredyLocation < 4) {
-          playSound('breathing');
+        } else if (newLocation >= 3 && prev.fredyLocation < 3) {
+          playSound('fredyLaugh');
         } else if (newLocation > prev.fredyLocation && newLocation >= 2) {
           playSound('footsteps');
         }
@@ -163,9 +90,7 @@ export const useGameLogic = ({ gameState, setGameState, playSound }: GameLogicPr
     return () => {
       if (fredyMoveRef.current) clearInterval(fredyMoveRef.current);
     };
-  }, [gameState.gameActive, gameState.gameOver, gameState.fredyStunned, gameState.difficulty, 
-      gameState.fredyAggression, gameState.hour, gameState.leftDoorClosed, gameState.rightDoorClosed, 
-      playSound, setGameState]);
+  }, [gameState.gameActive, gameState.gameOver, gameState.fredyStunned, gameState.difficulty, gameState.fredyAggression, playSound, setGameState]);
 
   // Система энергии
   useEffect(() => {
@@ -175,16 +100,17 @@ export const useGameLogic = ({ gameState, setGameState, playSound }: GameLogicPr
 
     energyDrainRef.current = setInterval(() => {
       setGameState(prev => {
-        let energyDrain = 0.5 * settings.energyDrain;
+        let energyDrain = 0.5 * settings.energyDrain; // Базовый расход
         
         if (prev.leftDoorClosed) energyDrain += 2 * settings.energyDrain;
         if (prev.rightDoorClosed) energyDrain += 2 * settings.energyDrain;
-        if (prev.currentCamera > 0) energyDrain += 0.3 * settings.energyDrain;
+        if (prev.currentCamera > 0) energyDrain += 0.3 * settings.energyDrain; // Камеры тоже тратят энергию
 
         const newEnergy = Math.max(0, prev.energy - energyDrain);
         
         if (newEnergy === 0) {
           playSound('powerOut');
+          // При отключении энергии все двери открываются
           return { 
             ...prev, 
             energy: 0, 
@@ -219,7 +145,8 @@ export const useGameLogic = ({ gameState, setGameState, playSound }: GameLogicPr
         return { 
           ...prev, 
           gameTime: times[newHour],
-          hour: newHour
+          hour: newHour,
+          fredyAggression: prev.fredyAggression + 1 // Увеличиваем агрессию каждый час
         };
       });
     }, 15000); // 15 секунд = 1 час в игре
@@ -235,7 +162,7 @@ export const useGameLogic = ({ gameState, setGameState, playSound }: GameLogicPr
       const timeout = setTimeout(() => {
         setGameState(prev => ({ ...prev, gameOver: true }));
         playSound('fredyAttack');
-      }, 2000);
+      }, 2000); // 2 секунды на отключение света
       
       return () => clearTimeout(timeout);
     }
