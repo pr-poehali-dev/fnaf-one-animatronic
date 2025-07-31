@@ -360,10 +360,8 @@ const GameApp = () => {
           onContinue={handleStoryResultContinue}
         />
       )}
-    </div>
-  );
-};
 
+      {/* Предупреждение о Фредди */}
       {gameState.fredyLocation >= 5 && !gameState.fredyStunned && (
         <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-50">
           <Card className="p-4 bg-destructive border-destructive-foreground glitch">
