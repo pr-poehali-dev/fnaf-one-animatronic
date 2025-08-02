@@ -224,7 +224,10 @@ export const CampaignScreen: React.FC<{ onBack: () => void; onStartLevel: (level
 
   const isLevelUnlocked = (levelId: number) => {
     if (!user) return levelId === 1;
-    return user.unlockedLevels.includes(levelId);
+    const unlocked = user.unlockedLevels.includes(levelId);
+    console.log(`Level ${levelId} unlocked:`, unlocked, 'User unlocked levels:', user.unlockedLevels);
+    // Временно разблокируем все уровни для тестирования
+    return true; // unlocked;
   };
 
   const handleLevelSelect = (level: CampaignLevel) => {
@@ -233,8 +236,12 @@ export const CampaignScreen: React.FC<{ onBack: () => void; onStartLevel: (level
   };
 
   const handleStartLevel = () => {
+    console.log('handleStartLevel called, selectedLevel:', selectedLevel);
     if (selectedLevel) {
+      console.log('Starting level:', selectedLevel.title);
       onStartLevel(selectedLevel);
+    } else {
+      console.log('No level selected');
     }
   };
 

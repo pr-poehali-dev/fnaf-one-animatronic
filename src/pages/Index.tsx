@@ -69,6 +69,7 @@ const GameApp = () => {
   };
 
   const startCampaignLevel = (level: CampaignLevel) => {
+    console.log('startCampaignLevel called with:', level.title);
     setSelectedCampaignLevel(level);
     setRadioCallResults({saved: 0, lost: 0});
     setGameState(prev => ({
