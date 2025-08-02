@@ -28,6 +28,7 @@ interface AuthContextType {
   saveProgress: (data: any) => void;
   loadProgress: () => any;
   updateStats: (stats: Partial<User['stats']>) => void;
+  unlockLevel: (levelId: number) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -142,6 +143,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     saveProgress({ stats: updatedStats });
   };
 
+  const unlockLevel = (levelId: number) => {
+    if (!user) return;
+    
+    const newUnlockedLevels = [...user.unlockedLevels];
+    if (!newUnlockedLevels.includes(levelId)) {
+      newUnlockedLevels.push(levelId);
+      saveProgress({ 
+        unlockedLevels: newUnlockedLevels,
+        campaignProgress: Math.max(user.campaignProgress, levelId)
+      });
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -150,7 +164,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logout,
       saveProgress,
       loadProgress,
-      updateStats
+      updateStats,
+      unlockLevel
     }}>
       {children}
     </AuthContext.Provider>
