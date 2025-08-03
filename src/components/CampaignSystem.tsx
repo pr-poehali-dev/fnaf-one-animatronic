@@ -231,7 +231,12 @@ export const CampaignScreen: React.FC<{ onBack: () => void; onStartLevel: (level
   };
 
   const handleLevelSelect = (level: CampaignLevel) => {
-    if (!isLevelUnlocked(level.id)) return;
+    console.log('handleLevelSelect called with level:', level.title);
+    if (!isLevelUnlocked(level.id)) {
+      console.log('Level is locked!');
+      return;
+    }
+    console.log('Setting selected level to:', level.title);
     setSelectedLevel(level);
   };
 
@@ -373,33 +378,22 @@ export const CampaignScreen: React.FC<{ onBack: () => void; onStartLevel: (level
         </div>
 
         {selectedLevel && (
-          <Card className="mt-6 bg-primary/10 border-primary">
-            <CardHeader>
-              <CardTitle className="text-primary">
-                Выбран: {selectedLevel.title}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-muted-foreground mb-2">
-                    Готов начать миссию? Помни - каждое решение влияет на жизни людей.
-                  </p>
-                  <div className="text-sm text-yellow-400">
-                    ⚠️ Во время игры будут поступать экстренные вызовы по рации
-                  </div>
-                </div>
-                <Button 
-                  onClick={handleStartLevel}
-                  className="bg-red-600 hover:bg-red-700 text-white"
-                  size="lg"
-                >
-                  <Icon name="Play" className="mr-2" />
-                  Начать миссию
-                </Button>
+          <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-red-900 to-red-700 border-t-2 border-red-500 p-4 z-50">
+            <div className="max-w-4xl mx-auto flex items-center justify-between">
+              <div className="text-white">
+                <h3 className="text-lg font-bold">🎯 {selectedLevel.title}</h3>
+                <p className="text-sm text-red-200">Готов к миссии? Нажми кнопку для запуска!</p>
               </div>
-            </CardContent>
-          </Card>
+              <Button 
+                onClick={handleStartLevel}
+                className="bg-white text-red-600 hover:bg-red-100 font-bold text-lg px-8 py-4 shadow-lg transform hover:scale-105 transition-all"
+                size="lg"
+              >
+                <Icon name="Play" className="mr-2" size={24} />
+                🚀 НАЧАТЬ МИССИЮ
+              </Button>
+            </div>
+          </div>
         )}
       </div>
     </div>
