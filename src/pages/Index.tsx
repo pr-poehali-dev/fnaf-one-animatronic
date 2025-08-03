@@ -14,7 +14,7 @@ import { VictoryScreen } from '@/components/VictoryScreen';
 import { StartScreen } from '@/components/StartScreen';
 import { AuthProvider, AuthScreen, useAuth } from '@/components/AuthSystem';
 import { CampaignScreen, CampaignLevel } from '@/components/CampaignSystem';
-import { RadioSystem } from '@/components/RadioSystem';
+import { RadioSystem } from '@/components/RadioDialogSystem';
 import { StoryAnimation, StoryResult } from '@/components/StoryAnimations';
 
 const GameApp = () => {
@@ -92,26 +92,16 @@ const GameApp = () => {
     playSound('gameStart');
   };
 
-  const handleRadioCallComplete = (callId: string, success: boolean) => {
-    const call = selectedCampaignLevel?.radioCalls.find(c => c.id === callId);
-    if (!call) return;
+  const handleRadioCallsComplete = (results: {saved: number; lost: number}) => {
+    setRadioCallResults(results);
 
-    setRadioCallResults(prev => ({
-      saved: prev.saved + (success ? 1 : 0),
-      lost: prev.lost + (success ? 0 : 1)
-    }));
-
-    const scenario = call.id;
-    const character = call.caller;
-    const description = call.choices.find(c => c.correct === success)?.result || '';
-
-    setShowStoryAnimation({
-      show: true,
-      type: success ? 'rescue' : 'death',
-      scenario,
-      character,
-      description
-    });
+    if (user) {
+      updateStats({
+        nightsSurvived: user.stats.nightsSurvived,
+        peopleSaved: user.stats.peopleSaved + results.saved,
+        peopleLost: user.stats.peopleLost + results.lost
+      });
+    }
   };
 
   const handleStoryAnimationComplete = () => {
@@ -313,7 +303,7 @@ const GameApp = () => {
         <SecurityMonitor gameState={gameState} />
 
         {/* Правая панель - Управление */}
-        <ControlPanel gameState={gameState} toggleDoor={toggleDoor} />
+        <ControlPanel gameState={gameState} toggleLeftDoor={toggleLeftDoor} toggleRightDoor={toggleRightDoor} />
 
         {/* Нижняя панель */}
         <div className="col-span-9 row-span-1 bg-card border-t border-border p-4 flex items-center justify-center">
@@ -349,11 +339,10 @@ const GameApp = () => {
       )}
       
       {/* Рация для режима кампании */}
-      {selectedCampaignLevel && (
+      {selectedCampaignLevel && gameState.gameActive && (
         <RadioSystem 
           radioCalls={selectedCampaignLevel.radioCalls}
-          onCallComplete={handleRadioCallComplete}
-          gameActive={gameState.gameActive}
+          onAllCallsComplete={handleRadioCallsComplete}
         />
       )}
       
