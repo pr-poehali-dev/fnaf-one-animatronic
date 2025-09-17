@@ -15,11 +15,9 @@ export const SecurityMonitor: React.FC<SecurityMonitorProps> = ({ gameState }) =
           </h2>
           {gameState.fredyLocation === gameState.currentCamera ? (
             <div className={`text-6xl mb-4 ${gameState.fredyStunned ? '' : 'glitch'}`}>
-              <img 
-                src="https://cdn.poehali.dev/files/d7871b22-1d68-4bb3-926d-0e9deb3bbfc8.png" 
-                alt="Freddy" 
-                className={`w-32 h-32 mx-auto object-contain ${gameState.fredyStunned ? '' : 'animate-pulse'}`}
-              />
+              <div className={`text-8xl ${gameState.fredyStunned ? '' : 'animate-pulse'}`}>
+                🐻
+              </div>
             </div>
           ) : (
             <div className="text-4xl text-gray-600">📹</div>
