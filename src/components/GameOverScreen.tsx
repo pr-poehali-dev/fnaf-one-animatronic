@@ -15,7 +15,7 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({ gameState, start
       <div className="absolute inset-0 bg-black animate-pulse">
         <div className="absolute inset-0 flex items-center justify-center">
           <img 
-            src="https://cdn.poehali.dev/files/7e09a0a8-f76b-434d-882a-c8f979093de5.png"
+            src="https://cdn.poehali.dev/files/ce5f70f7-d081-4057-b9ba-d4166ad6804b.png"
             alt="Freddy Fazbear"
             className="w-80 h-80 object-contain animate-bounce opacity-80"
           />
