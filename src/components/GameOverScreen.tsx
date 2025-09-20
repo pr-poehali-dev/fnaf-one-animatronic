@@ -14,9 +14,11 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({ gameState, start
       {/* СКРИМЕР ЭФФЕКТ */}
       <div className="absolute inset-0 bg-black animate-pulse">
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-9xl animate-bounce">
-            🐻
-          </div>
+          <img 
+            src="https://cdn.poehali.dev/files/7e09a0a8-f76b-434d-882a-c8f979093de5.png"
+            alt="Freddy Fazbear"
+            className="w-80 h-80 object-contain animate-bounce opacity-80"
+          />
         </div>
         <div className="absolute top-1/4 left-1/4 text-red-500 text-6xl glitch animate-ping">👁️</div>
         <div className="absolute top-3/4 right-1/4 text-red-500 text-6xl glitch animate-ping">👁️</div>
