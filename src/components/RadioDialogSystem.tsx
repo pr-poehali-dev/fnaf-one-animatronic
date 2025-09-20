@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -155,24 +155,28 @@ export const RadioSystem: React.FC<RadioSystemProps> = ({
   radioCalls, onAllCallsComplete 
 }) => {
   const [currentCallIndex, setCurrentCallIndex] = useState(0);
-  const [results, setResults] = useState<{ saved: number; lost: number }>({ saved: 0, lost: 0 });
   const [showResult, setShowResult] = useState(false);
   const [lastResult, setLastResult] = useState<string>('');
+  const resultsRef = useRef({ saved: 0, lost: 0 });
+  const hasCompletedRef = useRef(false);
 
   useEffect(() => {
-    if (currentCallIndex >= radioCalls.length) {
-      onAllCallsComplete(results);
+    if (currentCallIndex >= radioCalls.length && currentCallIndex > 0 && !hasCompletedRef.current) {
+      hasCompletedRef.current = true;
+      onAllCallsComplete(resultsRef.current);
     }
-  }, [currentCallIndex, radioCalls.length, results, onAllCallsComplete]);
+  }, [currentCallIndex, radioCalls.length, onAllCallsComplete]);
 
   const handleChoice = (choiceIndex: number, correct: boolean, result: string) => {
     setLastResult(result);
     setShowResult(true);
     
-    setResults(prev => ({
-      saved: prev.saved + (correct ? 1 : 0),
-      lost: prev.lost + (correct ? 0 : 1)
-    }));
+    // Обновляем результаты через ref
+    if (correct) {
+      resultsRef.current.saved += 1;
+    } else {
+      resultsRef.current.lost += 1;
+    }
 
     setTimeout(() => {
       setShowResult(false);
