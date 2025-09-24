@@ -27,7 +27,7 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({ gameState, start
       
       <Card className="p-8 bg-card border-primary text-center max-w-md z-10 relative">
         <h1 className="horror-title text-6xl text-primary mb-4 glitch">GAME OVER</h1>
-        <p className="text-xl mb-4">
+        <p className="text-xl mb-4 font-thin text-center text-zinc-900">
           {gameState.energy === 0 ? 'Энергия закончилась...' : 'Фредди поймал тебя...'}
         </p>
         <p className="text-sm text-muted-foreground mb-6">
