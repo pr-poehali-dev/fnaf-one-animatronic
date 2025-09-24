@@ -18,13 +18,10 @@ export const useGameLogic = ({ gameState, setGameState, playSound }: GameLogicPr
 
     const settings = DIFFICULTY_SETTINGS[gameState.difficulty];
     
-    // ЭКСТРЕМАЛЬНО продвинутый интервал с режимом ОХОТЫ
-    const isHuntingMode = Math.random() < (settings.huntingMode || 0);
-    const huntingMultiplier = isHuntingMode ? 0.25 : 1; // В режиме охоты в 4 раза быстрее!
-    
+    // Динамический интервал на основе времени, агрессии и близости к утру
     const timeBasedCalm = gameState.hour >= 4 ? settings.lateGameCalm : 1;
     const aggressionMultiplier = Math.min(gameState.fredyAggression / settings.maxAggression, 1);
-    const moveInterval = Math.max(200, settings.baseMoveInterval * (1 - aggressionMultiplier * 0.9) * timeBasedCalm * huntingMultiplier);
+    const moveInterval = Math.max(500, settings.baseMoveInterval * (1 - aggressionMultiplier * 0.8) * timeBasedCalm);
 
     fredyMoveRef.current = setInterval(() => {
       setGameState(prev => {
@@ -36,19 +33,14 @@ export const useGameLogic = ({ gameState, setGameState, playSound }: GameLogicPr
         // Успокоение к утру (особенно сильное в 5 утра)
         const hourCalm = prev.hour === 5 ? 0.3 : (prev.hour >= 4 ? timeBasedCalm : 1);
         
-        // ЭКСТРЕМАЛЬНОЕ увеличение агрессии + ловушки
-        const isTrapping = Math.random() < (settings.trapChance || 0);
-        const trapMultiplier = isTrapping ? 2.5 : 1; // Ловушки ускоряют рост агрессии
-        
-        const aggressionIncrease = settings.aggressionGrowth * (prev.hour + 1) * 0.08 * trapMultiplier;
+        // Увеличиваем агрессию более интенсивно
+        const aggressionIncrease = settings.aggressionGrowth * (prev.hour + 1) * 0.05;
         const newAggression = Math.min(settings.maxAggression, prev.fredyAggression + aggressionIncrease);
         
-        // БЕЗУМНАЯ вероятность движения с ловушками
+        // Вероятность движения с учетом всех факторов
         const baseChance = settings.moveChance * hourCalm;
-        const aggressionBonus = (newAggression / settings.maxAggression) * 0.4;
-        const trapBonus = isTrapping ? 0.2 : 0; // Ловушки дают +20% к движению
-        const huntBonus = isHuntingMode ? 0.15 : 0; // Охота дает +15%
-        const moveChance = Math.min(0.98, baseChance + aggressionBonus + trapBonus + huntBonus);
+        const aggressionBonus = (newAggression / settings.maxAggression) * 0.3;
+        const moveChance = Math.min(0.95, baseChance + aggressionBonus);
         
         const shouldMove = Math.random() < moveChance;
         
@@ -118,25 +110,15 @@ export const useGameLogic = ({ gameState, setGameState, playSound }: GameLogicPr
             // Дверь закрыта - решает что делать
             const switchChance = settings.doorSwitchSpeed * (1 + aggressionMultiplier);
             
-            // МГНОВЕННОЕ переключение + фейковые отступления
-            const fakeRetreat = Math.random() < 0.1; // 10% шанс фейкового отступления
-            
-            if (fakeRetreat) {
-              // Фейковое отступление - на секунду уходит, потом возвращается
-              setTimeout(() => {
-                setGameState(current => ({ ...current, fredyLocation: prev.fredyLocation }));
-              }, 800);
-              newLocation = 4;
-              playSound('fredyLaugh');
-            } else if (Math.random() < switchChance && !otherDoorClosed) {
-              // МГНОВЕННОЕ переключение на другую дверь
+            if (Math.random() < switchChance && !otherDoorClosed) {
+              // Быстро переключается на другую дверь (особенно на сложной сложности)
               newLocation = isLeftDoor ? 6 : 5;
               playSound('fredyLaugh');
-            } else if (Math.random() < 0.2) {
-              // Редкое отступление
+            } else if (Math.random() < 0.3) {
+              // Отступает в коридор
               newLocation = 4;
             } else {
-              // Терпеливо ждет у двери
+              // Остается у двери, ожидая
               newLocation = prev.fredyLocation;
             }
           }
