@@ -25,7 +25,7 @@ export const CAMERA_LOCATIONS = [
   'Правая дверь'
 ];
 
-export const GAME_VERSION = '1.5';
+export const GAME_VERSION = '2.0';
 
 export const DIFFICULTY_SETTINGS = {
   easy: {
