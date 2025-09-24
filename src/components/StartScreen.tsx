@@ -18,7 +18,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ startGame }) => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <div className="flex flex-col items-center gap-3 p-4 border rounded-lg">
             <Icon name="Camera" size={32} className="text-primary" />
-            <span className="font-semibold">Следи за Фредди</span>
+            <span className="font-semibold">Следи за Кредди</span>
             <span className="text-sm text-muted-foreground">Наблюдение замедляет его</span>
           </div>
           <div className="flex flex-col items-center gap-3 p-4 border rounded-lg">
