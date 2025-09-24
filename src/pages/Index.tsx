@@ -16,9 +16,6 @@ import { AuthProvider, AuthScreen, useAuth } from '@/components/AuthSystem';
 import { CampaignScreen, CampaignLevel } from '@/components/CampaignSystem';
 import { RadioSystem } from '@/components/RadioDialogSystem';
 import { StoryAnimation, StoryResult } from '@/components/StoryAnimations';
-import { VisitorCheckSystem } from '@/components/campaign/VisitorCheckSystem';
-import { VisitorManager } from '@/components/campaign/VisitorManager';
-import { VisitorCheck } from '@/components/campaign/CampaignData';
 
 const GameApp = () => {
   const { user, updateStats, unlockLevel } = useAuth();
@@ -27,8 +24,6 @@ const GameApp = () => {
   const [radioCallResults, setRadioCallResults] = useState<{saved: number; lost: number}>({saved: 0, lost: 0});
   const [showStoryAnimation, setShowStoryAnimation] = useState<{show: boolean; type: 'rescue' | 'death'; scenario: string; character: string; description: string} | null>(null);
   const [showStoryResult, setShowStoryResult] = useState(false);
-  const [currentVisitor, setCurrentVisitor] = useState<VisitorCheck | null>(null);
-  const [visitorCheckResults, setVisitorCheckResults] = useState<{humansPassed: number; robotsBlocked: number; mistakes: number}>({humansPassed: 0, robotsBlocked: 0, mistakes: 0});
   
   const [gameState, setGameState] = useState<GameState>({
     energy: 100,
@@ -77,8 +72,6 @@ const GameApp = () => {
     console.log('startCampaignLevel called with:', level.title);
     setSelectedCampaignLevel(level);
     setRadioCallResults({saved: 0, lost: 0});
-    setVisitorCheckResults({humansPassed: 0, robotsBlocked: 0, mistakes: 0});
-    setCurrentVisitor(null);
     setGameState(prev => ({
       ...prev,
       gameActive: true,
@@ -140,37 +133,6 @@ const GameApp = () => {
     setShowStoryResult(false);
     setCurrentScreen('campaign');
     setGameState(prev => ({ ...prev, gameActive: false, gameOver: false, victory: false }));
-  };
-
-  const handleVisitorCheckComplete = (success: boolean, visitorWasHuman: boolean) => {
-    setCurrentVisitor(null);
-    
-    if (success) {
-      if (visitorWasHuman) {
-        setVisitorCheckResults(prev => ({
-          ...prev,
-          humansPassed: prev.humansPassed + 1
-        }));
-      } else {
-        setVisitorCheckResults(prev => ({
-          ...prev,
-          robotsBlocked: prev.robotsBlocked + 1
-        }));
-      }
-    } else {
-      setVisitorCheckResults(prev => ({
-        ...prev,
-        mistakes: prev.mistakes + 1
-      }));
-    }
-  };
-
-  const handleVisitorCheckTimeUp = () => {
-    setCurrentVisitor(null);
-    setVisitorCheckResults(prev => ({
-      ...prev,
-      mistakes: prev.mistakes + 1
-    }));
   };
 
   const toggleLeftDoor = () => {
@@ -360,22 +322,6 @@ const GameApp = () => {
               <Icon name="Activity" size={16} />
               <span>Агрессия: {gameState.fredyAggression}/10</span>
             </div>
-            {selectedCampaignLevel && selectedCampaignLevel.visitorChecks.length > 0 && (
-              <>
-                <div className="flex items-center gap-2 text-green-400">
-                  <Icon name="Users" size={16} />
-                  <span>Люди пропущены: {visitorCheckResults.humansPassed}</span>
-                </div>
-                <div className="flex items-center gap-2 text-red-400">
-                  <Icon name="Shield" size={16} />
-                  <span>Роботы заблокированы: {visitorCheckResults.robotsBlocked}</span>
-                </div>
-                <div className="flex items-center gap-2 text-yellow-400">
-                  <Icon name="AlertTriangle" size={16} />
-                  <span>Ошибки: {visitorCheckResults.mistakes}</span>
-                </div>
-              </>
-            )}
           </div>
         </div>
       </div>
@@ -397,15 +343,6 @@ const GameApp = () => {
         <RadioSystem 
           radioCalls={selectedCampaignLevel.radioCalls}
           onAllCallsComplete={handleRadioCallsComplete}
-        />
-      )}
-
-      {/* Менеджер посетителей для режима кампании */}
-      {selectedCampaignLevel && gameState.gameActive && (
-        <VisitorManager
-          visitors={selectedCampaignLevel.visitorChecks}
-          gameActive={gameState.gameActive}
-          onVisitorArrived={setCurrentVisitor}
         />
       )}
       
@@ -439,15 +376,6 @@ const GameApp = () => {
             </div>
           </Card>
         </div>
-      )}
-
-      {/* Система проверки посетителей */}
-      {currentVisitor && (
-        <VisitorCheckSystem
-          visitor={currentVisitor}
-          onCheckComplete={handleVisitorCheckComplete}
-          onTimeUp={handleVisitorCheckTimeUp}
-        />
       )}
     </div>
   );
