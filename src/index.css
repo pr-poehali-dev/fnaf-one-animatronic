@@ -114,21 +114,6 @@
     }
   }
 
-  /* Анимации для системы рации */
-  .progress-critical {
-    animation: pulse-red-progress 1s infinite;
-  }
-
-  @keyframes pulse-red-progress {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.5;
-    }
-  }
-
   .static {
     background-image:
       radial-gradient(

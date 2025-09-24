@@ -14,7 +14,7 @@ import { VictoryScreen } from '@/components/VictoryScreen';
 import { StartScreen } from '@/components/StartScreen';
 import { AuthProvider, AuthScreen, useAuth } from '@/components/AuthSystem';
 import { CampaignScreen, CampaignLevel } from '@/components/CampaignSystem';
-import { RadioSystem } from '@/components/RadioDialogSystem';
+import { RadioSystem } from '@/components/RadioSystem';
 import { StoryAnimation, StoryResult } from '@/components/StoryAnimations';
 
 const GameApp = () => {
@@ -69,7 +69,6 @@ const GameApp = () => {
   };
 
   const startCampaignLevel = (level: CampaignLevel) => {
-    console.log('startCampaignLevel called with:', level.title);
     setSelectedCampaignLevel(level);
     setRadioCallResults({saved: 0, lost: 0});
     setGameState(prev => ({
@@ -92,16 +91,26 @@ const GameApp = () => {
     playSound('gameStart');
   };
 
-  const handleRadioCallsComplete = (results: {saved: number; lost: number}) => {
-    setRadioCallResults(results);
+  const handleRadioCallComplete = (callId: string, success: boolean) => {
+    const call = selectedCampaignLevel?.radioCalls.find(c => c.id === callId);
+    if (!call) return;
 
-    if (user) {
-      updateStats({
-        nightsSurvived: user.stats.nightsSurvived,
-        peopleSaved: user.stats.peopleSaved + results.saved,
-        peopleLost: user.stats.peopleLost + results.lost
-      });
-    }
+    setRadioCallResults(prev => ({
+      saved: prev.saved + (success ? 1 : 0),
+      lost: prev.lost + (success ? 0 : 1)
+    }));
+
+    const scenario = call.id;
+    const character = call.caller;
+    const description = call.choices.find(c => c.correct === success)?.result || '';
+
+    setShowStoryAnimation({
+      show: true,
+      type: success ? 'rescue' : 'death',
+      scenario,
+      character,
+      description
+    });
   };
 
   const handleStoryAnimationComplete = () => {
@@ -303,7 +312,7 @@ const GameApp = () => {
         <SecurityMonitor gameState={gameState} />
 
         {/* Правая панель - Управление */}
-        <ControlPanel gameState={gameState} toggleLeftDoor={toggleLeftDoor} toggleRightDoor={toggleRightDoor} />
+        <ControlPanel gameState={gameState} toggleDoor={toggleDoor} />
 
         {/* Нижняя панель */}
         <div className="col-span-9 row-span-1 bg-card border-t border-border p-4 flex items-center justify-center">
@@ -339,10 +348,11 @@ const GameApp = () => {
       )}
       
       {/* Рация для режима кампании */}
-      {selectedCampaignLevel && gameState.gameActive && (
+      {selectedCampaignLevel && (
         <RadioSystem 
           radioCalls={selectedCampaignLevel.radioCalls}
-          onAllCallsComplete={handleRadioCallsComplete}
+          onCallComplete={handleRadioCallComplete}
+          gameActive={gameState.gameActive}
         />
       )}
       
