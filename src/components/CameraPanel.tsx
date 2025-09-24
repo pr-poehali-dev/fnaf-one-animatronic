@@ -27,7 +27,7 @@ export const CameraPanel: React.FC<CameraPanelProps> = ({ gameState, switchCamer
       </div>
       
       <div className="mt-6 p-3 bg-secondary rounded">
-        <h4 className="font-semibold text-sm mb-2">Статус Кредди</h4>
+        <h4 className="font-semibold text-sm mb-2">Статус Фредди</h4>
         <div className="space-y-1 text-xs">
           <div>Агрессия: {gameState.fredyAggression}/10</div>
           <div className={`font-bold ${

@@ -11,14 +11,18 @@ export const StartScreen: React.FC<StartScreenProps> = ({ startGame }) => {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <Card className="p-8 bg-card border-primary text-center max-w-2xl">
-        <h1 className="horror-title text-8xl text-primary mb-6 glitch">один аниматроник</h1>
-        <h2 className="text-3xl font-bold mb-4">Одна ночь с Кредди</h2>
-        <p className="text-lg mb-8 text-muted-foreground"></p>
+        <h1 className="horror-title text-8xl text-primary mb-6 glitch">FNAF</h1>
+        <h2 className="text-3xl font-bold mb-4">One Nights at Freddy's</h2>
+        <p className="text-lg mb-8 text-muted-foreground">
+          Выживи одну ночь в пиццерии с аниматроником Фредди. 
+          Используй камеры для наблюдения и двери для защиты. 
+          Береги энергию - она ограничена!
+        </p>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <div className="flex flex-col items-center gap-3 p-4 border rounded-lg">
             <Icon name="Camera" size={32} className="text-primary" />
-            <span className="font-semibold">Следи за Кредди</span>
+            <span className="font-semibold">Следи за Фредди</span>
             <span className="text-sm text-muted-foreground">Наблюдение замедляет его</span>
           </div>
           <div className="flex flex-col items-center gap-3 p-4 border rounded-lg">

@@ -12,8 +12,24 @@ import { SecurityMonitor } from '@/components/SecurityMonitor';
 import { GameOverScreen } from '@/components/GameOverScreen';
 import { VictoryScreen } from '@/components/VictoryScreen';
 import { StartScreen } from '@/components/StartScreen';
+import { AuthProvider, AuthScreen, useAuth } from '@/components/AuthSystem';
+import { CampaignScreen, CampaignLevel } from '@/components/CampaignSystem';
+import { RadioSystem } from '@/components/RadioDialogSystem';
+import { StoryAnimation, StoryResult } from '@/components/StoryAnimations';
+import { VisitorCheckSystem } from '@/components/campaign/VisitorCheckSystem';
+import { VisitorManager } from '@/components/campaign/VisitorManager';
+import { VisitorCheck } from '@/components/campaign/CampaignData';
 
-const Index = () => {
+const GameApp = () => {
+  const { user, updateStats, unlockLevel } = useAuth();
+  const [currentScreen, setCurrentScreen] = useState<'menu' | 'survival' | 'campaign' | 'game'>('menu');
+  const [selectedCampaignLevel, setSelectedCampaignLevel] = useState<CampaignLevel | null>(null);
+  const [radioCallResults, setRadioCallResults] = useState<{saved: number; lost: number}>({saved: 0, lost: 0});
+  const [showStoryAnimation, setShowStoryAnimation] = useState<{show: boolean; type: 'rescue' | 'death'; scenario: string; character: string; description: string} | null>(null);
+  const [showStoryResult, setShowStoryResult] = useState(false);
+  const [currentVisitor, setCurrentVisitor] = useState<VisitorCheck | null>(null);
+  const [visitorCheckResults, setVisitorCheckResults] = useState<{humansPassed: number; robotsBlocked: number; mistakes: number}>({humansPassed: 0, robotsBlocked: 0, mistakes: 0});
+  
   const [gameState, setGameState] = useState<GameState>({
     energy: 100,
     leftDoorClosed: false,
@@ -36,7 +52,7 @@ const Index = () => {
   // Используем игровую логику
   useGameLogic({ gameState, setGameState, playSound });
 
-  const startGame = (difficulty: 'easy' | 'medium' | 'hard' = 'medium') => {
+  const startSurvivalGame = (difficulty: 'easy' | 'medium' | 'hard' = 'medium') => {
     setGameState(prev => ({
       ...prev,
       gameActive: true,
@@ -53,7 +69,108 @@ const Index = () => {
       leftDoorClosed: false,
       rightDoorClosed: false
     }));
+    setCurrentScreen('game');
     playSound('gameStart');
+  };
+
+  const startCampaignLevel = (level: CampaignLevel) => {
+    console.log('startCampaignLevel called with:', level.title);
+    setSelectedCampaignLevel(level);
+    setRadioCallResults({saved: 0, lost: 0});
+    setVisitorCheckResults({humansPassed: 0, robotsBlocked: 0, mistakes: 0});
+    setCurrentVisitor(null);
+    setGameState(prev => ({
+      ...prev,
+      gameActive: true,
+      gameOver: false,
+      victory: false,
+      energy: 100,
+      fredyLocation: 0,
+      fredyAggression: 1,
+      gameTime: '12:00 AM',
+      difficulty: level.difficulty as 'easy' | 'medium' | 'hard',
+      lastFredyMove: Date.now(),
+      fredyStunned: false,
+      hour: 0,
+      leftDoorClosed: false,
+      rightDoorClosed: false
+    }));
+    setCurrentScreen('game');
+    playSound('gameStart');
+  };
+
+  const handleRadioCallsComplete = (results: {saved: number; lost: number}) => {
+    setRadioCallResults(results);
+
+    if (user) {
+      updateStats({
+        nightsSurvived: user.stats.nightsSurvived,
+        peopleSaved: user.stats.peopleSaved + results.saved,
+        peopleLost: user.stats.peopleLost + results.lost
+      });
+    }
+  };
+
+  const handleStoryAnimationComplete = () => {
+    setShowStoryAnimation(null);
+  };
+
+  const handleGameEnd = () => {
+    if (selectedCampaignLevel && user) {
+      const levelCompleted = gameState.victory;
+      
+      if (levelCompleted) {
+        updateStats({
+          nightsSurvived: user.stats.nightsSurvived + 1,
+          peopleSaved: user.stats.peopleSaved + radioCallResults.saved,
+          peopleLost: user.stats.peopleLost + radioCallResults.lost
+        });
+        
+        const nextLevelId = selectedCampaignLevel.id + 1;
+        if (nextLevelId <= 3) {
+          unlockLevel(nextLevelId);
+        }
+      }
+      
+      setShowStoryResult(true);
+    }
+  };
+
+  const handleStoryResultContinue = () => {
+    setShowStoryResult(false);
+    setCurrentScreen('campaign');
+    setGameState(prev => ({ ...prev, gameActive: false, gameOver: false, victory: false }));
+  };
+
+  const handleVisitorCheckComplete = (success: boolean, visitorWasHuman: boolean) => {
+    setCurrentVisitor(null);
+    
+    if (success) {
+      if (visitorWasHuman) {
+        setVisitorCheckResults(prev => ({
+          ...prev,
+          humansPassed: prev.humansPassed + 1
+        }));
+      } else {
+        setVisitorCheckResults(prev => ({
+          ...prev,
+          robotsBlocked: prev.robotsBlocked + 1
+        }));
+      }
+    } else {
+      setVisitorCheckResults(prev => ({
+        ...prev,
+        mistakes: prev.mistakes + 1
+      }));
+    }
+  };
+
+  const handleVisitorCheckTimeUp = () => {
+    setCurrentVisitor(null);
+    setVisitorCheckResults(prev => ({
+      ...prev,
+      mistakes: prev.mistakes + 1
+    }));
   };
 
   const toggleLeftDoor = () => {
@@ -112,16 +229,83 @@ const Index = () => {
     playSound('cameraSwitch');
   };
 
-  if (gameState.gameOver) {
-    return <GameOverScreen gameState={gameState} startGame={startGame} />;
+  if (currentScreen === 'campaign') {
+    return (
+      <CampaignScreen 
+        onBack={() => setCurrentScreen('menu')}
+        onStartLevel={startCampaignLevel}
+      />
+    );
   }
 
-  if (gameState.victory) {
-    return <VictoryScreen gameState={gameState} startGame={startGame} />;
+  if (currentScreen === 'menu') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-red-900 to-black flex items-center justify-center p-4">
+        <Card className="w-full max-w-md bg-card/90 backdrop-blur border-red-500/30">
+          <div className="p-6 text-center">
+            <h1 className="text-3xl font-bold horror-title text-red-400 mb-6">
+              FNAF Security v{GAME_VERSION}
+            </h1>
+            
+            <div className="space-y-4">
+              <button
+                onClick={() => setCurrentScreen('campaign')}
+                className="w-full bg-primary hover:bg-primary/80 text-primary-foreground py-3 px-4 rounded-lg transition-colors font-semibold"
+              >
+                <Icon name="BookOpen" className="inline mr-2" />
+                КАМПАНИЯ
+              </button>
+              
+              <button
+                onClick={() => setCurrentScreen('survival')}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg transition-colors font-semibold"
+              >
+                <Icon name="Zap" className="inline mr-2" />
+                ВЫЖИВАНИЕ
+              </button>
+            </div>
+            
+            {user && (
+              <div className="mt-6 text-sm text-muted-foreground">
+                Добро пожаловать, {user.username}!
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
+    );
   }
 
-  if (!gameState.gameActive) {
-    return <StartScreen startGame={startGame} />;
+  if (currentScreen === 'survival') {
+    if (gameState.gameOver) {
+      return <GameOverScreen gameState={gameState} startGame={startSurvivalGame} />;
+    }
+
+    if (gameState.victory) {
+      return <VictoryScreen gameState={gameState} startGame={startSurvivalGame} />;
+    }
+
+    if (!gameState.gameActive) {
+      return <StartScreen startGame={startSurvivalGame} />;
+    }
+  }
+
+  if (currentScreen === 'game') {
+    if (gameState.gameOver) {
+      if (selectedCampaignLevel) {
+        handleGameEnd();
+      } else {
+        return <GameOverScreen gameState={gameState} startGame={startSurvivalGame} />;
+      }
+    }
+
+    if (gameState.victory) {
+      if (selectedCampaignLevel) {
+        handleGameEnd();
+      } else {
+        return <VictoryScreen gameState={gameState} startGame={startSurvivalGame} />;
+      }
+    }
   }
 
   return (
@@ -157,11 +341,7 @@ const Index = () => {
         <SecurityMonitor gameState={gameState} />
 
         {/* Правая панель - Управление */}
-        <ControlPanel 
-          gameState={gameState} 
-          toggleLeftDoor={toggleLeftDoor} 
-          toggleRightDoor={toggleRightDoor} 
-        />
+        <ControlPanel gameState={gameState} toggleLeftDoor={toggleLeftDoor} toggleRightDoor={toggleRightDoor} />
 
         {/* Нижняя панель */}
         <div className="col-span-9 row-span-1 bg-card border-t border-border p-4 flex items-center justify-center">
@@ -180,6 +360,22 @@ const Index = () => {
               <Icon name="Activity" size={16} />
               <span>Агрессия: {gameState.fredyAggression}/10</span>
             </div>
+            {selectedCampaignLevel && selectedCampaignLevel.visitorChecks.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 text-green-400">
+                  <Icon name="Users" size={16} />
+                  <span>Люди пропущены: {visitorCheckResults.humansPassed}</span>
+                </div>
+                <div className="flex items-center gap-2 text-red-400">
+                  <Icon name="Shield" size={16} />
+                  <span>Роботы заблокированы: {visitorCheckResults.robotsBlocked}</span>
+                </div>
+                <div className="flex items-center gap-2 text-yellow-400">
+                  <Icon name="AlertTriangle" size={16} />
+                  <span>Ошибки: {visitorCheckResults.mistakes}</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -195,19 +391,92 @@ const Index = () => {
           </Card>
         </div>
       )}
+      
+      {/* Рация для режима кампании */}
+      {selectedCampaignLevel && gameState.gameActive && (
+        <RadioSystem 
+          radioCalls={selectedCampaignLevel.radioCalls}
+          onAllCallsComplete={handleRadioCallsComplete}
+        />
+      )}
 
+      {/* Менеджер посетителей для режима кампании */}
+      {selectedCampaignLevel && gameState.gameActive && (
+        <VisitorManager
+          visitors={selectedCampaignLevel.visitorChecks}
+          gameActive={gameState.gameActive}
+          onVisitorArrived={setCurrentVisitor}
+        />
+      )}
+      
+      {/* Анимации историй */}
+      {showStoryAnimation?.show && (
+        <StoryAnimation
+          storyType={showStoryAnimation.type}
+          scenario={showStoryAnimation.scenario}
+          characterName={showStoryAnimation.character}
+          description={showStoryAnimation.description}
+          onComplete={handleStoryAnimationComplete}
+        />
+      )}
+      
+      {/* Результаты кампании */}
+      {showStoryResult && (
+        <StoryResult
+          saved={radioCallResults.saved}
+          lost={radioCallResults.lost}
+          onContinue={handleStoryResultContinue}
+        />
+      )}
+
+      {/* Предупреждение о Фредди */}
       {gameState.fredyLocation >= 5 && !gameState.fredyStunned && (
         <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-50">
           <Card className="p-4 bg-destructive border-destructive-foreground glitch">
             <div className="text-center text-destructive-foreground">
               <Icon name="Skull" size={24} className="mx-auto mb-2" />
-              <p className="font-bold">КРЕДДИ У ДВЕРЕЙ!</p>
+              <p className="font-bold">ФРЕДДИ У ДВЕРЕЙ!</p>
             </div>
           </Card>
         </div>
       )}
+
+      {/* Система проверки посетителей */}
+      {currentVisitor && (
+        <VisitorCheckSystem
+          visitor={currentVisitor}
+          onCheckComplete={handleVisitorCheckComplete}
+          onTimeUp={handleVisitorCheckTimeUp}
+        />
+      )}
     </div>
   );
+};
+
+const Index = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  return (
+    <AuthProvider>
+      <AuthWrapper onAuthSuccess={() => setIsAuthenticated(true)} isAuthenticated={isAuthenticated}>
+        <GameApp />
+      </AuthWrapper>
+    </AuthProvider>
+  );
+};
+
+const AuthWrapper = ({ children, onAuthSuccess, isAuthenticated }: { 
+  children: React.ReactNode; 
+  onAuthSuccess: () => void;
+  isAuthenticated: boolean;
+}) => {
+  const { user } = useAuth();
+  
+  if (!user && !isAuthenticated) {
+    return <AuthScreen onAuthSuccess={onAuthSuccess} />;
+  }
+  
+  return <>{children}</>;
 };
 
 export default Index;

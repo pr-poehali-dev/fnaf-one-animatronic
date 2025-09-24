@@ -118,6 +118,10 @@ export const CampaignLevelCard: React.FC<CampaignLevelCardProps> = ({
               <Icon name="Radio" className="mr-1" size={14} />
               {level.radioCalls.length} вызовов
             </div>
+            <div className="flex items-center text-purple-400">
+              <Icon name="Users" className="mr-1" size={14} />
+              {level.visitorChecks?.length || 0} посетителей
+            </div>
             <div className="flex items-center text-yellow-400">
               <Icon name="Star" className="mr-1" size={14} />
               +{level.rewards.experience} XP

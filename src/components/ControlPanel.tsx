@@ -50,7 +50,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
           <h4 className="font-semibold text-primary">Подсказки</h4>
           <Card className="p-3 bg-secondary text-xs">
             <ul className="space-y-1">
-              <li>• Наблюдение замедляет Кредди</li>
+              <li>• Наблюдение замедляет Фредди</li>
               <li>• Закрытые двери отталкивают его</li>
               <li>• Агрессия растет со временем</li>
               <li>• Экономь энергию!</li>
