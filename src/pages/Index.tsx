@@ -201,7 +201,7 @@ const Index = () => {
           <Card className="p-4 bg-destructive border-destructive-foreground glitch">
             <div className="text-center text-destructive-foreground">
               <Icon name="Skull" size={24} className="mx-auto mb-2" />
-              <p className="font-bold">ФРЕДДИ У ДВЕРЕЙ!</p>
+              <p className="font-bold">КРЕДДИ У ДВЕРЕЙ!</p>
             </div>
           </Card>
         </div>
